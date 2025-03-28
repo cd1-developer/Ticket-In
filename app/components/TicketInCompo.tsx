@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { ScrollArea } from "~/components/ui/scroll-area";
 import { Input } from "./ui/input";
 import { Checkbox } from "./ui/checkbox";
 import { useRevalidator } from "@remix-run/react";
@@ -13,6 +14,21 @@ import PaginationComponent from "./PaginationComponent";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Loading } from "~/components/Loader";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "~/components/ui/command";
+
 import {
   Table,
   TableBody,
@@ -22,7 +38,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Button } from "./ui/button";
-import { Filter } from "lucide-react";
+import { Filter, ListFilter, Check } from "lucide-react";
 
 enum ProgressStatus {
   Todo = "Todo",
@@ -71,7 +87,6 @@ function TicketInCompo({
     "Placement",
     "3 Word Description",
     "Assign To",
-
     "Status",
     "Mark Done",
   ];
@@ -94,21 +109,31 @@ function TicketInCompo({
     "Team ID",
     "Ticket ID",
   ];
+
   const { revalidate, state } = useRevalidator();
   const [currentPage, setCurrentPage] = useState<number | null>(null);
   const [searchValue, setSeachValue] = useState<string>("");
   const [filterSeach, setFilterSearch] = useState<string>(seachOptions[0]);
   const [message, setMessage] = useState<string>("");
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [selectedFilterValue, setselectedFilterValue] = useState({
-    value: seachOptions[0],
-    isChecked: false,
-  });
+  const [selectedFilterValue, setselectedFilterValue] = useState(
+    seachOptions[0]
+  );
+  const [isActive, setIsActive] = useState<boolean>(false);
   const [searchParams, setSearchParams] = useState<SeachParam[]>([]);
-  const [isChecked, setIsChecked] = useState<Record<string, boolean>>({});
+  const [isChecked, setIsChecked] = useState<Map<string, boolean>>(new Map());
   const itemsPerPage = 10; // Show 5 rows per page as requested
 
   // Calculate the current page's data
+
+  useEffect(() => {
+    if (ticketInData) {
+      const initialMap = new Map(
+        ticketInData.map((ticket) => [ticket._id, ticket.markDone])
+      );
+      setIsChecked(initialMap);
+    }
+  }, [ticketInData]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -154,37 +179,37 @@ function TicketInCompo({
 
   if (searchParams.length > 0) {
     currentTickets = ticketInData.filter((ticket: Ticket) => {
-      if (selectedFilterValue.value === "IG Username") {
+      if (selectedFilterValue === "IG Username") {
         return searchParams.some(
           (param: SeachParam) =>
             param.isChecked && param.param === ticket.igUsername
         );
-      } else if (selectedFilterValue.value === "Subscription") {
+      } else if (selectedFilterValue === "Subscription") {
         return searchParams.some(
           (param: SeachParam) =>
             param.isChecked && param.param === ticket.subscriptionId
         );
-      } else if (selectedFilterValue.value === "Av Username") {
+      } else if (selectedFilterValue === "Av Username") {
         return searchParams.some(
           (param: SeachParam) =>
             param.isChecked && param.param === ticket.avUsername
         );
-      } else if (selectedFilterValue.value === "Placement") {
+      } else if (selectedFilterValue === "Placement") {
         return searchParams.some(
           (param: SeachParam) =>
             param.isChecked && param.param === ticket.placement
         );
-      } else if (selectedFilterValue.value === "Assign To") {
+      } else if (selectedFilterValue === "Assign To") {
         return searchParams.some(
           (param: SeachParam) =>
             param.isChecked && param.param === ticket.assignTo
         );
-      } else if (selectedFilterValue.value === "Team ID") {
+      } else if (selectedFilterValue === "Team ID") {
         return searchParams.some(
           (param: SeachParam) =>
             param.isChecked && param.param === ticket.teamId
         );
-      } else if (selectedFilterValue.value === "Ticket ID") {
+      } else if (selectedFilterValue === "Ticket ID") {
         return searchParams.some(
           (param: SeachParam) =>
             param.isChecked && param.param === ticket.TicketId
@@ -196,20 +221,24 @@ function TicketInCompo({
 
   let filterValue = ticketInData
     .map((ticket: Ticket) => {
-      if (selectedFilterValue.value === "IG Username") {
+      if (selectedFilterValue === "IG Username") {
         return ticket.igUsername;
-      } else if (selectedFilterValue.value === "Subscription") {
+      } else if (selectedFilterValue === "Subscription") {
         return ticket.subscriptionId;
-      } else if (selectedFilterValue.value === "Av Username") {
+      } else if (selectedFilterValue === "AV Username") {
         return ticket.avUsername;
-      } else if (selectedFilterValue.value === "Placement") {
+      } else if (selectedFilterValue === "Placement") {
         return ticket.placement;
-      } else if (selectedFilterValue.value === "Assign To") {
+      } else if (selectedFilterValue === "Assign To") {
         return ticket.assignTo;
-      } else if (selectedFilterValue.value === "Team ID") {
+      } else if (selectedFilterValue === "Team ID") {
         return ticket.teamId;
-      } else if (selectedFilterValue.value === "Ticket ID") {
+      } else if (selectedFilterValue === "Ticket ID") {
         return ticket.TicketId;
+      } else if (selectedFilterValue === "3 Word Description") {
+        return ticket.description;
+      } else if (selectedFilterValue === "Status") {
+        return ticket.progressStatus;
       }
       return undefined;
     })
@@ -285,6 +314,19 @@ function TicketInCompo({
     revalidate();
   }
 
+  // Handler for checkbox changes
+  const handelChecked = (id: string, checked: boolean) => {
+    setIsChecked((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(id, checked);
+      return newMap;
+    });
+    console.log(isChecked.get(id));
+
+    // Optional: Call your API here
+    // saveHandler(id, checked);
+  };
+
   async function saveHandler(
     id: string,
     progressStatus: string,
@@ -292,27 +334,24 @@ function TicketInCompo({
   ) {
     if (!id) return;
 
-    // Optimistically update UI
+    handelChecked(id, markDone);
 
-    // try {
-    //   const response = await axios.post(`${apiEndPoint}/updateTicket`, {
-    //     id,
-    //     progressStatus,
-    //     markDone,
-    //   });
+    try {
+      const response = await axios.post(`${apiEndPoint}/updateTicket`, {
+        id,
+        progressStatus,
+        markDone,
+      });
 
-    //   console.log(response.data);
-    //   console.log(isChecked);
-    //   revalidate();
-    // } catch (error) {
-    //   console.error("Error updating ticket:", error);
+      console.log(response.data);
 
-    //   // Revert UI state if API fails
-    //   setIsChecked((prev) => ({ ...prev, [id]: !markDone }));
+      revalidate();
+    } catch (error) {
+      console.error("Error updating ticket:", error);
 
-    //   // Show error message
-    //   toast.error("Failed to update ticket. Please try again.");
-    // }
+      // Show error message
+      toast.error("Failed to update ticket. Please try again.");
+    }
   }
 
   return (
@@ -343,7 +382,14 @@ function TicketInCompo({
             />
           </div>
 
-          <Button>
+          <Button
+            onClick={() => setIsActive(!isActive)}
+            className={`transition-all ${
+              isActive
+                ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 dark:ring-offset-background"
+                : ""
+            }`}
+          >
             <Filter /> Filter
           </Button>
         </div>
@@ -352,7 +398,55 @@ function TicketInCompo({
             <TableHeader>
               <TableRow>
                 {headers.map((head: string) => (
-                  <TableHead>{head}</TableHead>
+                  <TableHead>
+                    {head}{" "}
+                    {isActive ? (
+                      <DropdownMenu
+                        onOpenChange={() => setselectedFilterValue(head)}
+                      >
+                        <DropdownMenuTrigger>
+                          <ListFilter size={15} />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <Command className="rounded-lg border shadow-md ">
+                            <CommandInput placeholder={`search ${head}...`} />
+                            <ScrollArea className=" rounded-md border p-4">
+                              <CommandList>
+                                <CommandEmpty>No results found.</CommandEmpty>
+
+                                {filterValue.map(
+                                  (value: string, index: any) => (
+                                    <CommandItem
+                                      key={index}
+                                      className="cursor-pointer"
+                                    >
+                                      <div
+                                        className="flex justify-between  w-full"
+                                        onClick={() => handelClick(value)}
+                                      >
+                                        {" "}
+                                        {shortenString(value)}{" "}
+                                        {value !== "" &&
+                                          searchParams.some(
+                                            (param: SeachParam) =>
+                                              value === param.param &&
+                                              param.isChecked
+                                          ) && (
+                                            <Check className="h-4 w-4 text-[#5D5FEF]" />
+                                          )}
+                                      </div>
+                                    </CommandItem>
+                                  )
+                                )}
+                              </CommandList>
+                            </ScrollArea>
+                          </Command>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      ""
+                    )}
+                  </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -402,7 +496,7 @@ function TicketInCompo({
                     {" "}
                     <Checkbox
                       className="ml-5"
-                      checked={isChecked[ticket._id] ?? ticket.markDone}
+                      checked={isChecked.get(ticket._id)}
                       onCheckedChange={(checked) =>
                         saveHandler(
                           ticket._id,
