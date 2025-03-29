@@ -17,7 +17,6 @@ import { Loading } from "~/components/Loader";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 
@@ -39,6 +38,7 @@ import {
 } from "~/components/ui/table";
 import { Button } from "./ui/button";
 import { Filter, ListFilter, Check } from "lucide-react";
+import { Sheet } from "~/components/Side-bar-sheet";
 
 enum ProgressStatus {
   Todo = "Todo",
@@ -122,6 +122,8 @@ function TicketInCompo({
   const [isActive, setIsActive] = useState<boolean>(false);
   const [searchParams, setSearchParams] = useState<SeachParam[]>([]);
   const [isChecked, setIsChecked] = useState<Map<string, boolean>>(new Map());
+  const [ticketData, setTicketData] = useState<Ticket | null>(null);
+  const [isSlideOpen, setIsSlideOpen] = useState<boolean>(false);
   const itemsPerPage = 10; // Show 5 rows per page as requested
 
   // Calculate the current page's data
@@ -239,6 +241,8 @@ function TicketInCompo({
         return ticket.description;
       } else if (selectedFilterValue === "Status") {
         return ticket.progressStatus;
+      } else if (selectedFilterValue === "Mark Done") {
+        return ticket.markDone;
       }
       return undefined;
     })
@@ -353,6 +357,8 @@ function TicketInCompo({
       toast.error("Failed to update ticket. Please try again.");
     }
   }
+  const openSheet = () => setIsSlideOpen(true);
+  const closeSheet = () => setIsSlideOpen(false);
 
   return (
     <div>
@@ -410,6 +416,20 @@ function TicketInCompo({
                         <DropdownMenuContent>
                           <Command className="rounded-lg border shadow-md ">
                             <CommandInput placeholder={`search ${head}...`} />
+                            <div className="flex gap-2 p-2 justify-evenly">
+                              <h2
+                                className="text-xs cursor-pointer"
+                                onClick={() => setSearchParams([])}
+                              >
+                                clear
+                              </h2>{" "}
+                              <h2
+                                className="text-xs cursor-pointer"
+                                onClick={selectHandler}
+                              >
+                                select
+                              </h2>{" "}
+                            </div>
                             <ScrollArea className=" rounded-md border p-4">
                               <CommandList>
                                 <CommandEmpty>No results found.</CommandEmpty>
@@ -452,7 +472,11 @@ function TicketInCompo({
             </TableHeader>
             <TableBody>
               {currentTickets?.map((ticket: Ticket) => (
-                <TableRow key={ticket._id} className="cursor-pointer">
+                <TableRow
+                  key={ticket._id}
+                  className="cursor-pointer"
+                  onClick={() => (setTicketData(ticket), openSheet())}
+                >
                   <TableCell>#Ticket ID</TableCell>
                   <TableCell>
                     {shortenString(ticket.subscriptionId || "Not Found")}
@@ -510,6 +534,12 @@ function TicketInCompo({
               ))}
             </TableBody>
           </Table>
+
+          <Sheet isOpen={isSlideOpen} onClose={closeSheet}>
+            <div>
+              <h2>Ticket ID</h2>
+            </div>
+          </Sheet>
           <PaginationComponent
             totalItems={ticketInData.length}
             itemsPerPage={itemsPerPage}
