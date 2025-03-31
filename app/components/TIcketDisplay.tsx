@@ -1,3 +1,5 @@
+import React from "react";
+
 import axios from "axios";
 import {
   Select,
@@ -42,240 +44,24 @@ import { Sheet } from "~/components/Side-bar-sheet";
 import { Separator } from "./ui/separator";
 import { BottomBorderInput } from "./Bottom-border-input";
 
-enum ProgressStatus {
-  Todo = "Todo",
-  InProgress = "In Progress",
-  Hold = "Hold",
-  DiscussWithExecutive = "Discuss With Executive",
-  DiscussWithSenior = "Discuss With Senior",
-  Complete = "Complete",
+interface TIcketDisplayProp<T> {
+  searchOptions: string[];
+  filterSearch: string;
+  setFilterSearch: React.Dispatch<React.SetStateAction<string>>;
+  setselectedFilterValue: React.Dispatch<React.SetStateAction<string>>;
+  ticketData: T[];
+  headers: string[];
 }
-
-type Ticket = {
-  _id: string;
-  date: string;
-  TicketId: string;
-  priority: "Urgent" | "Critical" | "Normal" | "Emergency" | "Medium";
-  subscriptionId: string;
-  avUsername: string;
-  igUsername: string;
-  placement: string;
-  description: string;
-  yourMessage: [string];
-  supportResponse: string;
-  excecutive: string;
-  teamId: string;
-  assignTo: string;
-  progressStatus: ProgressStatus;
-  markDone: boolean;
-};
-type SeachParam = {
-  param: string;
-  isChecked: boolean;
-};
-
-type TicketInCompoProp = {
-  ticketInData: Ticket[];
-  apiEndPoint: string;
-};
-
-function TicketInCompo({ ticketInData, apiEndPoint }: TicketInCompoProp) {
-  const headers = [
-    "Ticket ID",
-    "Subscription",
-    "AV Username",
-    "IG Username",
-    "Placement",
-    "3 Word Description",
-    "Assign To",
-    "Status",
-    "Mark Done",
-  ];
-
-  const Options: ProgressStatus[] = [
-    ProgressStatus.Todo,
-    ProgressStatus.InProgress,
-    ProgressStatus.Hold,
-    ProgressStatus.DiscussWithExecutive,
-    ProgressStatus.DiscussWithSenior,
-    ProgressStatus.Complete,
-  ];
-
-  const seachOptions = [
-    "IG Username",
-    "Subscription",
-    "Av Username",
-    "Placement",
-    "Assign To",
-    "Team ID",
-    "Ticket ID",
-  ];
-
-  const { revalidate, state } = useRevalidator();
-  const [currentPage, setCurrentPage] = useState<number | null>(null);
+const TIcketDisplay = <T extends {}>({
+  searchOptions,
+  filterSearch,
+  setFilterSearch,
+  ticketData,
+  headers,
+  setselectedFilterValue,
+}: TIcketDisplayProp<T>) => {
   const [searchValue, setSeachValue] = useState<string>("");
-  const [filterSeach, setFilterSearch] = useState<string>(seachOptions[0]);
-  const [message, setMessage] = useState({
-    id: "",
-    message: "",
-  });
-
-  const [selectedFilterValue, setselectedFilterValue] = useState(
-    seachOptions[0]
-  );
   const [isActive, setIsActive] = useState<boolean>(false);
-  const [searchParams, setSearchParams] = useState<SeachParam[]>([]);
-  const [isChecked, setIsChecked] = useState<Map<string, boolean>>(new Map());
-  const [ticketData, setTicketData] = useState<Ticket | null>(null);
-  const [messages, setMessages] = useState<string[]>([]);
-
-  const [isSlideOpen, setIsSlideOpen] = useState<boolean>(false);
-  const itemsPerPage = 10; // Show 5 rows per page as requested
-
-  useEffect(() => {
-    if (ticketInData) {
-      const initialMap = new Map(
-        ticketInData.map((ticket) => [ticket._id, ticket.markDone])
-      );
-      setIsChecked(initialMap);
-    }
-  }, [ticketInData]);
-
-  useEffect(() => {
-    if (ticketData?._id) {
-      setMessages([...ticketData.yourMessage]);
-    }
-  }, [ticketData]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, []);
-
-  if (currentPage === null) {
-    return <Loading />;
-  }
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-
-  let currentTickets = ticketInData.filter((ticket: Ticket) => {
-    if (filterSeach !== "") {
-      if (filterSeach === "IG Username") {
-        return ticket.igUsername
-          .toLowerCase()
-          .includes(searchValue.toLowerCase());
-      } else if (filterSeach === "Subscription") {
-        return ticket.subscriptionId
-          .toLowerCase()
-          .includes(searchValue.toLowerCase());
-      } else if (filterSeach === "Av Username") {
-        return ticket.avUsername
-          .toLowerCase()
-          .includes(searchValue.toLowerCase());
-      } else if (filterSeach === "Assign To") {
-        return ticket.assignTo
-          .toLowerCase()
-          .includes(searchValue.toLowerCase());
-      } else if (filterSeach === "Team ID") {
-        return ticket.teamId.toLowerCase().includes(searchValue.toLowerCase());
-      } else if (filterSeach === "Ticket ID") {
-        return ticket.TicketId.toLowerCase().includes(
-          searchValue.toLowerCase()
-        );
-      } else if (filterSeach === "Placement") {
-        return ticket.placement
-          .toLowerCase()
-          .includes(searchValue.toLowerCase());
-      }
-    }
-  });
-
-  if (searchParams.length > 0) {
-    currentTickets = ticketInData.filter((ticket: Ticket) => {
-      if (selectedFilterValue === "IG Username") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.igUsername
-        );
-      } else if (selectedFilterValue === "Subscription") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.subscriptionId
-        );
-      } else if (selectedFilterValue === "Av Username") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.avUsername
-        );
-      } else if (selectedFilterValue === "Placement") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.placement
-        );
-      } else if (selectedFilterValue === "Assign To") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.assignTo
-        );
-      } else if (selectedFilterValue === "Team ID") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.teamId
-        );
-      } else if (selectedFilterValue === "Ticket ID") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.TicketId
-        );
-      } else if (selectedFilterValue === "Status") {
-        return searchParams.some(
-          (param: SeachParam) =>
-            param.isChecked && param.param === ticket.progressStatus
-        );
-      }
-    });
-  }
-
-  // Values for seach parameters filter option
-
-  let filterValue = ticketInData
-    .map((ticket: Ticket) => {
-      if (selectedFilterValue === "IG Username") {
-        return ticket.igUsername;
-      } else if (selectedFilterValue === "Subscription") {
-        return ticket.subscriptionId;
-      } else if (selectedFilterValue === "AV Username") {
-        return ticket.avUsername;
-      } else if (selectedFilterValue === "Placement") {
-        return ticket.placement;
-      } else if (selectedFilterValue === "Assign To") {
-        return ticket.assignTo;
-      } else if (selectedFilterValue === "Team ID") {
-        return ticket.teamId;
-      } else if (selectedFilterValue === "Ticket ID") {
-        return ticket.TicketId;
-      } else if (selectedFilterValue === "3 Word Description") {
-        return ticket.description;
-      } else if (selectedFilterValue === "Status") {
-        return ticket.progressStatus;
-      } else if (selectedFilterValue === "Mark Done") {
-        return ticket.markDone;
-      }
-      return undefined;
-    })
-    .filter((val): val is string => val !== undefined);
-
-  filterValue = removeDuplicate(filterValue);
-
-  if (searchValue === "" && searchParams.length === 0) {
-    currentTickets = ticketInData.slice(indexOfFirstItem, indexOfLastItem);
-  }
-  currentTickets = currentTickets.slice(indexOfFirstItem, indexOfLastItem);
-
-  // Change page
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-  };
-
   function shortenString(text: string) {
     if (text.length < 17) {
       let shortText = text?.slice(0, 18);
@@ -284,123 +70,21 @@ function TicketInCompo({ ticketInData, apiEndPoint }: TicketInCompoProp) {
     return text;
   }
 
-  function formateDate(dateString: string) {
-    if (dateString === "Old") return "Old";
-    else {
-      let dateInfo = new Date(dateString);
-      let date = dateInfo.getDate();
-      let month = dateInfo.getMonth() + 1;
-      let year = dateInfo.getFullYear();
-      return `${date}/${month}/${year}`;
-    }
-  }
-
-  function removeDuplicate(array: any) {
-    let seen = new Set();
-    return array.filter((arr: any) => {
-      if (seen.has(arr)) {
-        return false;
-      } else {
-        seen.add(arr);
-        return true;
-      }
-    });
-  }
-
-  function handelClick(value: string) {
-    setSearchParams((prev) => {
-      const existingIndex = prev.findIndex((param) => param.param === value);
-      if (existingIndex >= 0) {
-        return prev.map((item, index) =>
-          index === existingIndex
-            ? { ...item, isChecked: !item.isChecked }
-            : item
-        );
-      }
-      return [...prev, { param: value, isChecked: true }];
-    });
-  }
-
-  function selectHandler() {
-    setSearchParams(() =>
-      filterValue.map((val: string) => ({ param: val, isChecked: true }))
-    );
-  }
-
-  // Handler for checkbox changes
-  const handelChecked = (id: string, checked: boolean) => {
-    setIsChecked((prev) => {
-      const newMap = new Map(prev);
-      newMap.set(id, checked);
-      return newMap;
-    });
-    console.log(isChecked.get(id));
-
-    // Optional: Call your API here
-    // saveHandler(id, checked);
-  };
-
-  async function saveHandler(
-    id: string,
-    progressStatus: string,
-    markDone: boolean
-  ) {
-    if (!id) return;
-
-    handelChecked(id, markDone);
-
-    try {
-      const response = await axios.post(`${apiEndPoint}/updateTicket`, {
-        id,
-        progressStatus,
-        markDone,
-      });
-
-      console.log(response.data);
-
-      revalidate();
-    } catch (error) {
-      console.error("Error updating ticket:", error);
-
-      // Show error message
-      toast.error("Failed to update ticket. Please try again.");
-    }
-  }
-
-  async function submitHandler(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    setMessages((prev) => [message.message, ...prev]);
-    setMessage({
-      id: "",
-      message: "",
-    });
-
-    const result = await axios.post(`${apiEndPoint}/addMessage`, {
-      id: message.id,
-      message: message.message,
-    });
-    revalidate();
-    console.log(result.data);
-  }
-  const openSheet = () => setIsSlideOpen(true);
-  const closeSheet = () => setIsSlideOpen(false);
-
   return (
     <div>
       <div className="flex flex-col gap-2 ">
         <div className="flex gap-8 justify-between">
           <div className="flex gap-2">
             <Select
-              defaultValue={seachOptions[0]}
-              value={filterSeach}
-              onValueChange={(value) => setFilterSearch(value)}
+              defaultValue={searchOptions[0]}
+              value={filterSearch}
+              onValueChange={(value: string) => setFilterSearch(value)}
             >
               <SelectTrigger className="w-[120px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {seachOptions.map((option: string, index) => (
+                {searchOptions.map((option: string, index) => (
                   <SelectItem key={index} value={option}>
                     {option}
                   </SelectItem>
@@ -408,7 +92,7 @@ function TicketInCompo({ ticketInData, apiEndPoint }: TicketInCompoProp) {
               </SelectContent>
             </Select>
             <Input
-              placeholder={`Search ${filterSeach}...`}
+              placeholder={`Search ${filterSearch}...`}
               onChange={(e) => setSeachValue(e.target.value)}
               value={searchValue}
             />
@@ -440,7 +124,7 @@ function TicketInCompo({ ticketInData, apiEndPoint }: TicketInCompoProp) {
                           <ListFilter size={15} />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          <Command className="rounded-lg border shadow-md ">
+                          {/* <Command className="rounded-lg border shadow-md ">
                             <CommandInput placeholder={`search ${head}...`} />
                             <div className="flex gap-2 p-2 justify-evenly">
                               <h2
@@ -486,7 +170,7 @@ function TicketInCompo({ ticketInData, apiEndPoint }: TicketInCompoProp) {
                                 )}
                               </CommandList>
                             </ScrollArea>
-                          </Command>
+                          </Command> */}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : (
@@ -561,7 +245,7 @@ function TicketInCompo({ ticketInData, apiEndPoint }: TicketInCompoProp) {
             </TableBody>
           </Table>
 
-          <Sheet isOpen={isSlideOpen} onClose={closeSheet}>
+          {/* <Sheet isOpen={isSlideOpen} onClose={closeSheet}>
             <div className="p-2 ">
               <h2 className="py-2">
                 Ticket ID :{String("Ticket ID").toUpperCase()}
@@ -651,17 +335,17 @@ function TicketInCompo({ ticketInData, apiEndPoint }: TicketInCompoProp) {
                 </div>
               </div>
             </div>
-          </Sheet>
-          <PaginationComponent
-            totalItems={ticketInData.length}
+          </Sheet> */}
+          {/* <PaginationComponent
+            totalItems={ticketData.length}
             itemsPerPage={itemsPerPage}
             currentPage={currentPage}
             onPageChange={handlePageChange}
-          />
+          /> */}
         </div>
       </div>
     </div>
   );
-}
+};
 
-export default TicketInCompo;
+export default TIcketDisplay;

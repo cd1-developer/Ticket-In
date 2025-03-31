@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 import { Separator } from "~/components/ui/separator";
 import TicketInCompo from "~/components/TicketInCompo";
 import { useLoaderData } from "@remix-run/react";
-import { Button } from "~/components/ui/button";
 
 export const meta: MetaFunction = () => {
   return [
@@ -18,6 +17,7 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Welcome to Remix!" },
   ];
 };
+
 export const loader: LoaderFunction = async () => {
   const result = await axios.get(`${process.env.API_ENDPOINT}/getTicketIn`);
   const ticketInData = result?.data.ticketInData;
@@ -30,6 +30,7 @@ export default function Index() {
   const { ticketInData, apiEndPoint } = useLoaderData<typeof loader>();
 
   const [activeBar, setActiveBar] = useState<"in" | "out">("in");
+
   useEffect(() => {
     const isDarkMode = localStorage.getItem("darkMode") === "true";
     setDark(isDarkMode);
