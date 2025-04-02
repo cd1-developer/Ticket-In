@@ -43,32 +43,80 @@ import { Filter, ListFilter, Check } from "lucide-react";
 import { Sheet } from "~/components/Side-bar-sheet";
 import { Separator } from "./ui/separator";
 import { BottomBorderInput } from "./Bottom-border-input";
+import { Ticket } from "./TicketInCompo";
 
-interface TIcketDisplayProp<T> {
+interface TicketDisplayProp<T> {
   searchOptions: string[];
   filterSearch: string;
+  searchValue: string;
+  filteredUniqueValues: string[];
+  Options: string[];
   setFilterSearch: React.Dispatch<React.SetStateAction<string>>;
   setselectedFilterValue: React.Dispatch<React.SetStateAction<string>>;
-  ticketData: T[];
+  setSeachValue: React.Dispatch<React.SetStateAction<string>>;
+  ticketData: Ticket[];
   headers: string[];
+  selectAll: boolean;
+  selectedValues: Record<string, boolean>;
+  setSelectedValues: React.Dispatch<
+    React.SetStateAction<Record<string, boolean>>
+  >;
+  setSelectAll: React.Dispatch<React.SetStateAction<boolean>>;
 }
-const TIcketDisplay = <T extends {}>({
+const TicketDisplay = <T,>({
   searchOptions,
   filterSearch,
   setFilterSearch,
   ticketData,
   headers,
   setselectedFilterValue,
-}: TIcketDisplayProp<T>) => {
-  const [searchValue, setSeachValue] = useState<string>("");
+  Options,
+  searchValue,
+  setSeachValue,
+  filteredUniqueValues,
+  selectedValues,
+  setSelectedValues,
+  selectAll,
+  setSelectAll,
+}: TicketDisplayProp<T>) => {
   const [isActive, setIsActive] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, []);
+
+  // Handle "Select All" checkbox
+
+  const handelSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    const newSelectedValues: Record<string, boolean> = {};
+    filteredUniqueValues.forEach((val: any) => {
+      newSelectedValues[val] = checked;
+    });
+
+    setSelectedValues((prev) => ({ ...prev, ...newSelectedValues }));
+  };
+
   function shortenString(text: string) {
-    if (text.length < 17) {
+    if (text.length > 17) {
       let shortText = text?.slice(0, 18);
       return shortText;
     }
     return text;
   }
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  if (currentPage === null) {
+    return <Loading />;
+  }
+  const itemsPerPage = 10;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+
+  let currentTickets = ticketData.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <div>
@@ -124,53 +172,68 @@ const TIcketDisplay = <T extends {}>({
                           <ListFilter size={15} />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          {/* <Command className="rounded-lg border shadow-md ">
+                          <Command className="rounded-lg border shadow-md ">
                             <CommandInput placeholder={`search ${head}...`} />
-                            <div className="flex gap-2 p-2 justify-evenly">
-                              <h2
-                                className="text-xs cursor-pointer"
-                                onClick={() => setSearchParams([])}
+                            <div className="flex items-center space-x-2 p-2">
+                              <Checkbox
+                                id="select-all"
+                                checked={selectAll}
+                                onCheckedChange={(checked) =>
+                                  handelSelectAll(checked as boolean)
+                                }
+                              />
+                              <label
+                                htmlFor="select-all"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                               >
-                                clear
-                              </h2>{" "}
-                              <h2
-                                className="text-xs cursor-pointer"
-                                onClick={selectHandler}
-                              >
-                                select
-                              </h2>{" "}
+                                Select All
+                              </label>
                             </div>
                             <ScrollArea className=" rounded-md border p-4">
                               <CommandList>
                                 <CommandEmpty>No results found.</CommandEmpty>
 
-                                {filterValue.map(
+                                {filteredUniqueValues.map(
                                   (value: string, index: any) => (
                                     <CommandItem
                                       key={index}
                                       className="cursor-pointer"
                                     >
-                                      <div
-                                        className="flex justify-between  w-full"
-                                        onClick={() => handelClick(value)}
-                                      >
-                                        {" "}
-                                        {shortenString(value)}{" "}
-                                        {value !== "" &&
-                                          searchParams.some(
-                                            (param: SeachParam) =>
-                                              value === param.param &&
-                                              param.isChecked
-                                          ) && (
-                                            <Check className="h-4 w-4 text-[#5D5FEF]" />
-                                          )}
+                                      <div className="flex gap-2">
+                                        <Checkbox
+                                          id={`value-${index}`}
+                                          checked={
+                                            selectedValues[value] || false
+                                          }
+                                          onCheckedChange={(
+                                            checked: boolean
+                                          ) => {
+                                            setSelectedValues((prev) => ({
+                                              ...prev,
+                                              [value]: checked as boolean,
+                                            }));
+                                            // Update selectAll state based on all checkboxes
+
+                                            const allChecked = Object.values({
+                                              ...selectedValues,
+                                              [value]: checked as boolean,
+                                            }).every(Boolean); // Cheking all values in allChecked object is true or not if all are true it return true else false
+                                            setSelectAll(allChecked);
+                                          }}
+                                        />
+                                        <label
+                                          htmlFor={`value-${index}`}
+                                          className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                          {shortenString(value)}
+                                        </label>
                                       </div>
                                     </CommandItem>
                                   )
                                 )}
                               </CommandList>
                             </ScrollArea>
-                          </Command> */}
+                          </Command>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : (
@@ -181,12 +244,8 @@ const TIcketDisplay = <T extends {}>({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentTickets?.map((ticket: Ticket) => (
-                <TableRow
-                  key={ticket._id}
-                  className="cursor-pointer"
-                  onClick={() => (setTicketData(ticket), openSheet())}
-                >
+              {currentTickets?.map((ticket) => (
+                <TableRow key={ticket?._id} className="cursor-pointer">
                   <TableCell>#Ticket ID</TableCell>
                   <TableCell>
                     {shortenString(ticket.subscriptionId || "Not Found")}
@@ -210,9 +269,9 @@ const TIcketDisplay = <T extends {}>({
                     <Select
                       defaultValue={ticket.progressStatus}
                       key={ticket.progressStatus}
-                      onValueChange={(value) =>
-                        saveHandler(ticket._id, value, ticket.markDone)
-                      }
+                      // onValueChange={(value) =>
+                      //   saveHandler(ticket._id, value, ticket.markDone)
+                      // }
                     >
                       <SelectTrigger className="w-[120px] ">
                         <SelectValue />
@@ -230,14 +289,14 @@ const TIcketDisplay = <T extends {}>({
                     {" "}
                     <Checkbox
                       className="ml-5"
-                      checked={isChecked.get(ticket._id)}
-                      onCheckedChange={(checked) =>
-                        saveHandler(
-                          ticket._id,
-                          ticket.progressStatus,
-                          Boolean(checked)
-                        )
-                      }
+                      // checked={isChecked.get(ticket._id)}
+                      // onCheckedChange={(checked) =>
+                      //   saveHandler(
+                      //     ticket._id,
+                      //     ticket.progressStatus,
+                      //     Boolean(checked)
+                      //   )
+                      // }
                     />
                   </TableCell>
                 </TableRow>
@@ -336,16 +395,16 @@ const TIcketDisplay = <T extends {}>({
               </div>
             </div>
           </Sheet> */}
-          {/* <PaginationComponent
+          <PaginationComponent
             totalItems={ticketData.length}
             itemsPerPage={itemsPerPage}
             currentPage={currentPage}
             onPageChange={handlePageChange}
-          /> */}
+          />
         </div>
       </div>
     </div>
   );
 };
 
-export default TIcketDisplay;
+export default TicketDisplay;
