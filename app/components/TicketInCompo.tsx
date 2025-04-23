@@ -103,7 +103,7 @@ function TicketIn({ ticketInData, apiEndPoint }: TicketInCompoProp) {
         case "Ticket ID":
           return ticket.TicketId.toLowerCase().includes(searchLower);
         case "Placement":
-          return ticket.placement.toLowerCase().includes(searchLower);
+          return ticket.placement?.toLowerCase().includes(searchLower);
 
         default:
           return true;
